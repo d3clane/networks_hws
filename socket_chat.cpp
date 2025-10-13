@@ -122,7 +122,7 @@ int create_udp_client_socket() {
     return fd;
 }
 
-bool handle_stdin(std::string& line_out) {
+bool read_stdin(std::string& line_out) {
     if (!std::getline(std::cin, line_out)) {
         return false;
     }
@@ -130,9 +130,7 @@ bool handle_stdin(std::string& line_out) {
 }
 
 void run_tcp_connection(int client_fd) {
-    bool running = true;
-
-    while (running) {
+    while (true) {
         fd_set readfds;
         FD_ZERO(&readfds);
         FD_SET(client_fd, &readfds);
@@ -156,9 +154,8 @@ void run_tcp_connection(int client_fd) {
 
         if (FD_ISSET(STDIN_FILENO, &readfds)) {
             std::string line;
-            if (!handle_stdin(line)) {
-                running = false;
-                continue;
+            if (!read_stdin(line)) {
+                break;
             }
             line.push_back('\n');
             send_all(client_fd, line.c_str(), line.size());
@@ -196,9 +193,7 @@ void run_tcp_client(const std::string& ip, uint16_t port) {
     int fd = connect_tcp_client(ip, port);
     std::cout << "Connected to server" << std::endl;
 
-    bool running = true;
-
-    while (running) {
+    while (true) {
         fd_set readfds;
         FD_ZERO(&readfds);
         FD_SET(fd, &readfds);
@@ -222,9 +217,8 @@ void run_tcp_client(const std::string& ip, uint16_t port) {
 
         if (FD_ISSET(STDIN_FILENO, &readfds)) {
             std::string line;
-            if (!handle_stdin(line)) {
-                running = false;
-                continue;
+            if (!read_stdin(line)) {
+                break;
             }
             line.push_back('\n');
             send_all(fd, line.c_str(), line.size());
@@ -267,9 +261,6 @@ void run_udp_server(const std::string& ip, uint16_t port) {
                 reinterpret_cast<sockaddr*>(&from_addr),
                 &from_len);
             if (received < 0) {
-                if (errno == EINTR) {
-                    continue;
-                }
                 continue;
             }
 
@@ -288,7 +279,7 @@ void run_udp_server(const std::string& ip, uint16_t port) {
 
         if (FD_ISSET(STDIN_FILENO, &readfds)) {
             std::string line;
-            if (!handle_stdin(line)) {
+            if (!read_stdin(line)) {
                 break;
             }
             if (!has_client) {
@@ -336,9 +327,6 @@ void run_udp_client(const std::string& ip, uint16_t port) {
                 reinterpret_cast<sockaddr*>(&from_addr),
                 &from_len);
             if (received < 0) {
-                if (errno == EINTR) {
-                    continue;
-                }
                 continue;
             }
 
@@ -354,7 +342,7 @@ void run_udp_client(const std::string& ip, uint16_t port) {
 
         if (FD_ISSET(STDIN_FILENO, &readfds)) {
             std::string line;
-            if (!handle_stdin(line)) {
+            if (!read_stdin(line)) {
                 break;
             }
             line.push_back('\n');
