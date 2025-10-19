@@ -4,7 +4,7 @@
 
 ```
 git clone https://github.com/d3clane/networks_hws.git
-g++ -O2 socket_chat.cpp -o socket_chat
+g++ -std=c++17 -O2 socket_chat.cpp -o socket_chat
 ./socket_chat tcp server IP PORT
 ```
 
