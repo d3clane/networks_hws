@@ -394,7 +394,9 @@ int main(int argc, char* argv[]) {
     } else if (protocol == "udp" && role == "client") {
         run_udp_client(ip, port);
     } else {
-        assert(false && "Unknown mode");
+        printf("Incorrect protocol or role\n");
+        print_usage(argv[0]);
+        return -1;
     }
 }
 
