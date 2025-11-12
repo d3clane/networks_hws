@@ -1,0 +1,1 @@
+action=drop qtype=28

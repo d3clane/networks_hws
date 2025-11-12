@@ -1,0 +1,2 @@
+action=drop qname=bad.example
+action=drop qname=bad2.example
