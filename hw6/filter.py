@@ -1,8 +1,6 @@
-#!/usr/bin/env python3
 from netfilterqueue import NetfilterQueue
 from scapy.all import IP, ICMP, UDP, DNS, DNSRR, Raw, send, dnsqtypes, icmptypes
 import sys
-
 
 TRIGGER = "rerand0m.ru"
 FAKE_RESPONSES_SUBNET = "10.0.0."
@@ -135,6 +133,36 @@ def handle_icmp(pkt, ip_pkt):
     send(reply)
     pkt.drop()
 
+def handle_udp_traceroute(pkt, ip_pkt):
+    udp = ip_pkt[UDP]
+
+    if udp.dport == 53 or udp.sport == 53:
+        pkt.accept()
+        return
+
+    if ip_pkt.dst != dest_ip():
+        pkt.accept()
+        return
+
+    if ip_pkt.ttl < POEM_NUM_LINES:
+        src_ip = cur_ret_ip(ip_pkt.ttl - 1)
+        reply = (
+            IP(src=src_ip, dst=ip_pkt.src) /
+            ICMP(type=11, code=0)          / 
+            Raw(bytes(ip_pkt))
+        )
+    else:
+        src_ip = dest_ip()
+        reply = (
+            IP(src=src_ip, dst=ip_pkt.src) / 
+            ICMP(type=3, code=3)           /
+            Raw(bytes(ip_pkt))
+        )
+
+    send(reply)
+    pkt.drop()
+
+
 def handle_packet(pkt):
     ip_payload = IP(pkt.get_payload())
 
@@ -142,6 +170,8 @@ def handle_packet(pkt):
         handle_dns(pkt, ip_payload)
     elif ip_payload.haslayer(ICMP):
         handle_icmp(pkt, ip_payload)
+    elif ip_payload.haslayer(UDP):
+        handle_udp_traceroute(pkt, ip_payload)
     else:
         pkt.accept()
 
