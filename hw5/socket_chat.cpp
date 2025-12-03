@@ -65,7 +65,7 @@ SSL_CTX* init_server_ssl_ctx(const std::string& cert_path, const std::string& ke
     return ctx;
 }
 
-SSL_CTX* init_client_ssl_ctx() {
+SSL_CTX* init_client_ssl_ctx(const std::string& ca_cert_path) {
     const SSL_METHOD* method = TLS_client_method();
     SSL_CTX* ctx = SSL_CTX_new(method);
     assert(ctx);
@@ -73,9 +73,14 @@ SSL_CTX* init_client_ssl_ctx() {
     int ok = SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION);
     assert(ok);
 
-    SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, nullptr);
+    ok = SSL_CTX_load_verify_locations(ctx, ca_cert_path.c_str(), nullptr);
+    assert(ok);
+
+    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, nullptr);
+    SSL_CTX_set_verify_depth(ctx, 4);
 
     set_keylog_callback(ctx);
+
     return ctx;
 }
 
@@ -297,11 +302,11 @@ void run_tcp_server(const std::string& ip, uint16_t port,
     }
 }
 
-void run_tcp_client(const std::string& ip, uint16_t port) {
+void run_tcp_client(const std::string& ip, uint16_t port, const std::string& ca_cert_path) {
     int fd = connect_tcp_client(ip, port);
     std::cout << "Connected to server" << std::endl;
 
-    SSL_CTX* ctx = init_client_ssl_ctx();
+    SSL_CTX* ctx = init_client_ssl_ctx(ca_cert_path);
     SSL* ssl = SSL_new(ctx);
     assert(ssl);
 
@@ -484,8 +489,6 @@ void run_udp_client(const std::string& ip, uint16_t port) {
     ::close(fd);
 }
 
-// ======================= Общие утилиты =======================
-
 inline uint16_t parse_port(const std::string& str) {
     char* end = nullptr;
     long port = std::strtol(str.c_str(), &end, 10);
@@ -496,7 +499,7 @@ inline uint16_t parse_port(const std::string& str) {
 void print_usage(const std::string& prog) {
     std::cout << "Usage:\n"
               << "  " << prog << " tcp server <ip> <port> <cert.pem> <key.pem>\n"
-              << "  " << prog << " tcp client <ip> <port>\n"
+              << "  " << prog << " tcp client <ip> <port> <ca.pem>\n"
               << "  " << prog << " udp server <ip> <port>\n"
               << "  " << prog << " udp client <ip> <port>\n";
 }
@@ -522,9 +525,10 @@ int main(int argc, char* argv[]) {
         std::string key_path  = argv[6];
 
         run_tcp_server(ip, port, cert_path, key_path);
-
     } else if (protocol == "tcp" && role == "client") {
-        run_tcp_client(ip, port);
+        assert(argc >= 6);
+        std::string ca_path = argv[5];
+        run_tcp_client(ip, port, ca_path);
     } else if (protocol == "udp" && role == "server") {
         run_udp_server(ip, port);
     } else if (protocol == "udp" && role == "client") {
